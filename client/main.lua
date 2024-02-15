@@ -177,6 +177,8 @@ function CharacterClass:selectCharacter(payload, cb)
     SetEntityAsMissionEntity(self.charPed, true, true)
     DeleteEntity(self.charPed)
     cb("ok")
+    Wait(2000) -- TODO need to resolve this
+    SetTimecycleModifier('default')
 end
 
 function CharacterClass:setupCharacters(cb)
@@ -304,6 +306,7 @@ RegisterNetEvent('qb-multicharacter:client:closeNUI', function(toggle)
 end)
 
 RegisterNetEvent('qb-multicharacter:client:spawnLastLocation', function(coords, cData)
+    print('qb-multicharacter:client:spawnLastLocation')
     character:spawnLastLocation(coords, cData)
 end)
 

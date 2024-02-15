@@ -67,7 +67,7 @@ end, "admin")
 
 QBCore.Commands.Add("closeNUI", Lang:t("commands.closeNUI_description"), {}, false, function(source)
     local src = source
-    TriggerClientEvent('qb-multicharacter:client:closeNUI', src)
+    TriggerClientEvent('qb-multicharacter:client:closeNUI', src, true)
 end)
 
 -- Events
@@ -125,14 +125,14 @@ RegisterNetEvent('qb-multicharacter:server:createCharacter', function(data)
             print('^2[qb-core]^7 '..GetPlayerName(src)..' has successfully loaded!')
             QBCore.Commands.Refresh(src)
             loadHouseData(src)
-            TriggerClientEvent("qb-multicharacter:client:closeNUI", src)
+            TriggerClientEvent("qb-multicharacter:client:closeNUI", src, true)
             TriggerClientEvent('apartments:client:setupSpawnUI', src, newData)
             GiveStarterItems(src)
         else
             print('^2[qb-core]^7 '..GetPlayerName(src)..' has successfully loaded!')
             QBCore.Commands.Refresh(src)
             loadHouseData(src)
-            TriggerClientEvent("qb-multicharacter:client:closeNUIdefault", src)
+            TriggerClientEvent("qb-multicharacter:client:closeNUIdefault", src, false)
             GiveStarterItems(src)
         end
     end

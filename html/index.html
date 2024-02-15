@@ -289,12 +289,15 @@
                     this.selectedCharacter = idx
 
                     if (this.characters[idx] !== undefined) {
-                        axios.post('https://qb-multicharacter/cDataPed', {
-                            cData: this.characters[idx]
+                        axios.post('https://qb-multicharacter/characterAction', {
+                            cData: this.characters[idx],
+                            option: 'selectSlot'
                         });
                     }
                     else {
-                        axios.post('https://qb-multicharacter/cDataPed', {})
+                        axios.post('https://qb-multicharacter/characterAction', {
+                            option: 'selectSlot'
+                        })
                     }
                 },
 
@@ -305,8 +308,9 @@
                 delete_character: function() {
                     if (this.show.delete == true) {
                         this.show.delete = false
-                        axios.post('https://qb-multicharacter/removeCharacter', {
-                            citizenid: this.characters[this.selectedCharacter].citizenid
+                        axios.post('https://qb-multicharacter/characterAction', {
+                            citizenid: this.characters[this.selectedCharacter].citizenid,
+                            option: 'deleteCharacter'
                         });
                     }
                     else {
@@ -322,8 +326,9 @@
                         var data = this.characters[this.selectedCharacter]
 
                         if (data !== undefined) {
-                            axios.post('https://qb-multicharacter/selectCharacter', {
-                                cData: data
+                            axios.post('https://qb-multicharacter/characterAction', {
+                                cData: data,
+                                option: 'selectCharacter'
                             });
                             setTimeout(function() {
                                 viewmodel.show.characters = false
@@ -350,13 +355,14 @@
                     if (profanityTest && registerData.firstname !== undefined && registerData.firstname !== "" && registerData.lastname !== undefined && registerData.lastname !== "" && registerData.gender !== undefined && registerData.nationality !== undefined && registerData.nationality !== "" && registerData.date !== undefined) {
                         this.show.register = false
 
-                        axios.post('https://qb-multicharacter/createNewCharacter', {
+                        axios.post('https://qb-multicharacter/characterAction', {
                             firstname: registerData.firstname,
                             lastname: registerData.lastname,
                             nationality: registerData.nationality,
                             birthdate: registerData.date,
                             gender: registerData.gender,
                             cid: this.selectedCharacter,
+                            option: 'createNewCharacter'
                         });
                     }
                     else {
@@ -426,14 +432,17 @@
                                 }, 500);
 
                                 setTimeout(function () {
-                                    axios.post('https://qb-multicharacter/setupCharacters');
+                                    axios.post('https://qb-multicharacter/characterAction' ,{
+                                        option : 'setupCharacters'
+                                    });
                                     setTimeout(function () {
                                         clearInterval(DotsInterval);
                                         loadingProgress = 0;
                                         viewmodel.loadingText = viewmodel.translate('retrieving_playerdata');
                                         viewmodel.show.loading = false
                                         viewmodel.show.characters = true
-                                        axios.post('https://qb-multicharacter/removeBlur');
+                                        //axios.post('https://qb-multicharacter/removeBlur'); -- why was this here?
+                                        //was only used once ever, and could have just combined it with the other axios.post
                                     }, 2000);
                                 }, 2000);
                             }

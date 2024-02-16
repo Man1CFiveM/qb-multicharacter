@@ -2,7 +2,6 @@ local QBCore = exports['qb-core']:GetCoreObject()
 local hasDonePreloading = {}
 
 -- Functions
-
 local function GiveStarterItems(source)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
@@ -140,6 +139,8 @@ end)
 
 RegisterNetEvent('qb-multicharacter:server:deleteCharacter', function(citizenid)
     local src = source
+    if not src then return end
+    if type (citizenid) ~= "string" then return end
     QBCore.Player.DeleteCharacter(src, citizenid)
     TriggerClientEvent('QBCore:Notify', src, Lang:t("notifications.char_deleted") , "success")
 end)
@@ -151,12 +152,6 @@ QBCore.Functions.CreateCallback("qb-multicharacter:server:GetUserCharacters", fu
     local license = QBCore.Functions.GetIdentifier(src, 'license')
 
     MySQL.query('SELECT * FROM players WHERE license = ?', {license}, function(result)
-        cb(result)
-    end)
-end)
-
-QBCore.Functions.CreateCallback("qb-multicharacter:server:GetServerLogs", function(_, cb)
-    MySQL.query('SELECT * FROM server_logs', {}, function(result)
         cb(result)
     end)
 end)
@@ -182,6 +177,7 @@ QBCore.Functions.CreateCallback("qb-multicharacter:server:GetNumberOfCharacters"
 end)
 
 QBCore.Functions.CreateCallback("qb-multicharacter:server:setupCharacters", function(source, cb)
+    if not source then return end
     local license = QBCore.Functions.GetIdentifier(source, 'license')
     local plyChars = {}
     MySQL.query('SELECT * FROM players WHERE license = ?', {license}, function(result)
@@ -195,7 +191,10 @@ QBCore.Functions.CreateCallback("qb-multicharacter:server:setupCharacters", func
     end)
 end)
 
-QBCore.Functions.CreateCallback("qb-multicharacter:server:getSkin", function(_, cb, cid)
+QBCore.Functions.CreateCallback("qb-multicharacter:server:getSkin", function(source, cb, cid)
+    if not source then return end
+    if type(cid) ~= "string" then return end
+
     local result = MySQL.query.await('SELECT * FROM playerskins WHERE citizenid = ? AND active = ?', {cid, 1})
     if result[1] ~= nil then
         cb(result[1].model, result[1].skin)
@@ -212,3 +211,10 @@ QBCore.Commands.Add("deletechar", Lang:t("commands.deletechar_description"), {{n
         TriggerClientEvent("QBCore:Notify", source, Lang:t("notifications.forgot_citizenid"), "error")
     end
 end, "god")
+
+
+-- QBCore.Functions.CreateCallback("qb-multicharacter:server:GetServerLogs", function(_, cb) -- is this some old code, it's not used anywhere
+--     MySQL.query('SELECT * FROM server_logs', {}, function(result)
+--         cb(result)
+--     end)
+-- end)

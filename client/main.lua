@@ -1,34 +1,54 @@
--- Metatables: 
--- In Lua, metatables are used to define behavior that is not directly supported by tables. 
--- This includes operations like addition and subtraction on tables, comparison between tables, 
--- and defining what happens when a table is accessed with a key that it does not contain. 
--- In the context of your code, metatables are used to implement object-oriented programming. 
--- The setmetatable function is used to set the metatable for the new object, 
--- which allows you to use the : operator to call methods on the object.
+-- Encapsulation: 
+-- Classes and methods allow you to bundle related data and functionality together. 
+-- This makes your code easier to understand and maintain, 
+-- as it's clear which functions are intended to operate on which data.
 
--- Classes: Classes are a fundamental concept in object-oriented programming. 
--- They allow you to define objects that contain both data (fields) and operations on that data (methods). 
--- This can make your code more organized and easier to understand, as related data and operations are grouped together. 
--- In your code, the CharacterClass is used to define a type of object that represents a character, 
--- with methods for loading models, initializing the character model, and controlling the sky camera.
+-- Inheritance: 
+-- Metatables allow you to implement inheritance, 
+-- where one class can inherit the properties and methods of another. 
+-- This can reduce code duplication and make your code more flexible.
 
--- File-scoped variables: File-scoped variables are variables that are declared outside of any function 
--- and are accessible from anywhere within the same file. They are used to store data that needs to be shared 
--- between multiple functions in the file. In your code, the character variable is file-scoped, 
--- which allows it to be accessed from any function in the file. 
---     This is useful because many different functions need to operate on the current character.
+-- Operator Overloading: 
+-- Metatables also allow you to define custom behavior for standard Lua operators
+-- when they're used with your objects. This can make your code more intuitive and easier to read.
 
--- Using these concepts can make your code more organized, more reusable, and easier to understand and maintain. 
--- However, they also add a level of complexity, 
--- so it's important to use them judiciously and only when they provide a clear benefit.
+-- Control Over Global Variables: Global variables can be accessed and modified from anywhere in your code, 
+-- which can lead to bugs that are difficult to track down. By using classes and methods, 
+-- you can control access to your data and prevent it from being accidentally modified.
+
+-- Polymorphism: 
+-- With the use of metatables and classes, you can create methods that behave differently 
+-- depending on the type of the object it's being used with. 
+-- This allows you to write more flexible and reusable code.
+
+-- Data Hiding: 
+-- Classes and methods can be used to implement private properties and methods, 
+-- which can prevent external code from directly accessing and modifying the internal state of your objects.
 
 local QBCore = exports['qb-core']:GetCoreObject()
 local character
 -- Define the Character class
 CharacterClass = {}
-CharacterClass.__index = CharacterClass
+CharacterClass.__index = function(self, key)
+    -- Look for the method in the CharacterClass table
+    local method = rawget(CharacterClass, key)
+    -- If the method exists, wrap it in a pcall to catch any errors
+    if method then
+        -- Return a new function that calls the method with pcall
+        return function(...)
+            -- Call the method with pcall
+            local status, result = pcall(method, ...)
+            -- If the call was successful, return the result
+            if not status then
+                -- If the call failed, print the error message
+                print("^2: "..key..' - ^5'..result) -- print the error message
+            end
+            return result
+        end
+    end
+end
 
--- Constructor
+-- This is the constructor for the CharacterClass. It initializes a new instance of the class with default values for its properties.
 function CharacterClass.new()
     local self = setmetatable({}, CharacterClass)
     self.randomModels = { -- models possible to load when choosing empty slot
@@ -41,7 +61,8 @@ function CharacterClass.new()
     self.cached_player_skins = {}
     return self
 end
-
+--- func desc
+---@param model any -- model to load
 function CharacterClass:loadModel(model) -- should be using the core loadmodel function
     RequestModel(model)
     while not HasModelLoaded(model) do
@@ -49,24 +70,26 @@ function CharacterClass:loadModel(model) -- should be using the core loadmodel f
     end
 end
 
+--render a preview of the players ped, if not model is provided, a random model will be loaded
+---@param model any -- model to load
+---@param data any -- appearance data
 function CharacterClass:initializePedModel(model, data)
-    CreateThread(function()
-        if not model then -- all thise should be a core function to load a model
-            model = joaat(self.randomModels[math.random(#self.randomModels)])
-        end
-        character:loadModel(model)
-        self.charPed = CreatePed(2, model, Config.PedCoords.x, Config.PedCoords.y, Config.PedCoords.z - 0.98, Config.PedCoords.w, false, true)
-        SetPedComponentVariation(self.charPed, 0, 0, 0, 2)
-        FreezeEntityPosition(self.charPed, false)
-        SetEntityInvincible(self.charPed, true)
-        PlaceObjectOnGroundProperly(self.charPed)
-        SetBlockingOfNonTemporaryEvents(self.charPed, true)
-        if data then
-            TriggerEvent('qb-clothing:client:loadPlayerClothing', data, self.charPed)
-        end
-    end)
+    if not model then -- all thise should be a core function to load a model
+        model = joaat(self.randomModels[math.random(#self.randomModels)])
+    end
+    character:loadModel(model)
+    self.charPed = CreatePed(2, model, Config.PedCoords.x, Config.PedCoords.y, Config.PedCoords.z - 0.98, Config.PedCoords.w, false, true)
+    SetPedComponentVariation(self.charPed, 0, 0, 0, 2)
+    FreezeEntityPosition(self.charPed, false)
+    SetEntityInvincible(self.charPed, true)
+    PlaceObjectOnGroundProperly(self.charPed)
+    SetBlockingOfNonTemporaryEvents(self.charPed, true)
+    if data then
+        TriggerEvent('qb-clothing:client:loadPlayerClothing', data, self.charPed)
+    end
 end
 
+-- Function to control the sky camera
 function CharacterClass:skyCam(bool)
     TriggerEvent('qb-weathersync:client:DisableSync')
     if not bool then
@@ -85,54 +108,52 @@ function CharacterClass:skyCam(bool)
     RenderScriptCams(true, false, 1, true, true)
 end
 
+-- Function to open the character selection menu
 function CharacterClass:openCharMenu(bool)
     -- Wrap the body of the function in a pcall
-    local status, error = pcall(function()
-        if bool then
-            SetNuiFocus(false, false)
-            DoScreenFadeOut(10)
-            Wait(1000)
-            local interior = GetInteriorAtCoords(Config.Interior.x, Config.Interior.y, Config.Interior.z - 18.9)
-            LoadInterior(interior)
-            while not IsInteriorReady(interior) do
-                Wait(1000)
-            end
-            FreezeEntityPosition(PlayerPedId(), true)
-            SetEntityCoords(PlayerPedId(), Config.HiddenCoords.x, Config.HiddenCoords.y, Config.HiddenCoords.z, true, false, false, false)
-            Wait(1500)
-            ShutdownLoadingScreen()
-            ShutdownLoadingScreenNui()
+    -- CREATE ERROR
+    -- undefinedFunction() -- Call an undefined function to trigger an error 
+    if bool then
+        SetNuiFocus(false, false)
+        DoScreenFadeOut(10)
+        Wait(1000)
+        local interior = GetInteriorAtCoords(Config.Interior.x, Config.Interior.y, Config.Interior.z - 18.9)
+        -- LoadInterior(interior) -- old name
+        PinInteriorInMemory(interior)
+        while not IsInteriorReady(interior) do
+            Wait(100)
         end
-        QBCore.Functions.TriggerCallback("qb-multicharacter:server:GetNumberOfCharacters", function(result)
-            local translations = {}
-            for k in pairs(Lang.fallback and Lang.fallback.phrases or Lang.phrases) do
-                if k:sub(0, ('ui.'):len()) then
-                    translations[k:sub(('ui.'):len() + 1)] = Lang:t(k)
-                end
+        FreezeEntityPosition(PlayerPedId(), true)
+        SetEntityCoords(PlayerPedId(), Config.HiddenCoords.x, Config.HiddenCoords.y, Config.HiddenCoords.z, true, false, false, false)
+        Wait(1500)
+        ShutdownLoadingScreen()
+        ShutdownLoadingScreenNui()
+    end
+    QBCore.Functions.TriggerCallback("qb-multicharacter:server:GetNumberOfCharacters", function(result)
+        local translations = {}
+        for k in pairs(Lang.fallback and Lang.fallback.phrases or Lang.phrases) do
+            if k:sub(0, ('ui.'):len()) then
+                translations[k:sub(('ui.'):len() + 1)] = Lang:t(k)
             end
-            SetNuiFocus(bool, bool)
-            SendNUIMessage({
-                action = "ui",
-                customNationality = Config.customNationality,
-                toggle = bool,
-                nChar = result,
-                enableDeleteButton = Config.EnableDeleteButton,
-                translations = translations
-            })
-            character:skyCam(bool)
-            if not self.loadScreenCheckState then
-                ShutdownLoadingScreenNui()
-                self.loadScreenCheckState = true
-            end
-        end)
+        end
+        SetNuiFocus(bool, bool)
+        SendNUIMessage({
+            action = "ui",
+            customNationality = Config.customNationality,
+            toggle = bool,
+            nChar = result,
+            enableDeleteButton = Config.EnableDeleteButton,
+            translations = translations
+        })
+        character:skyCam(bool)
+        if not self.loadScreenCheckState then
+            ShutdownLoadingScreenNui()
+            self.loadScreenCheckState = true
+        end
     end)
-
-    -- If the pcall returned false, an error occurred
-    if not status then return print(status, error) end
-    -- Call your error handling function with the error message
-    -- QBCore.Functions.handle_error(error) core error handling
 end
 
+-- Function to select a character slot
 function CharacterClass:selectSlot(payload, cb)
     if self.charPed then -- delete the ped if it exist
         SetEntityAsMissionEntity(self.charPed, true, true)
@@ -170,6 +191,7 @@ function CharacterClass:selectSlot(payload, cb)
     cb("ok")
 end
 
+-- Function to select a character
 function CharacterClass:selectCharacter(payload, cb)
     DoScreenFadeOut(10)
     TriggerServerEvent('qb-multicharacter:server:loadUserData', payload.cData)
@@ -181,6 +203,7 @@ function CharacterClass:selectCharacter(payload, cb)
     SetTimecycleModifier('default')
 end
 
+-- Function to setup the character selection menu
 function CharacterClass:setupCharacters(cb)
     QBCore.Functions.TriggerCallback("qb-multicharacter:server:setupCharacters", function(result)
         -- self.cached_player_skins = {} not needed
@@ -191,9 +214,15 @@ function CharacterClass:setupCharacters(cb)
         cb("ok")
     end)
     SetTimecycleModifier('default')
+    -- CREATE ERROR
+    -- local a = nil
+    -- print(a.someField) -- This will cause an error because 'a' is nil
 end
 
+-- Function to create a new character
 function CharacterClass:createNewCharacter(payload, cb)
+    -- CREATE ERROR
+    -- error("Error in errorMethod1!")
     DoScreenFadeOut(150)
     if payload.gender == Lang:t("ui.male") then
         payload.gender = 0
@@ -205,6 +234,7 @@ function CharacterClass:createNewCharacter(payload, cb)
     cb("ok")
 end
 
+-- Function to spawn the player at the last location
 function CharacterClass:spawnLastLocation(coords, payload)
     QBCore.Functions.TriggerCallback('apartments:GetOwnedApartment', function(result)
         if result then
@@ -237,6 +267,7 @@ function CharacterClass:spawnLastLocation(coords, payload)
     end, payload.citizenid)
 end
 
+-- Function to remove a character
 function CharacterClass:removeCharacter(payload, cb)
     TriggerServerEvent('qb-multicharacter:server:deleteCharacter', payload.citizenid)
     DeletePed(self.charPed)
@@ -244,6 +275,7 @@ function CharacterClass:removeCharacter(payload, cb)
     cb("ok")
 end
 
+-- Function to close the character selection menu
 function CharacterClass:closeNUI(apartment)
     if not apartment then
         DeleteEntity(self.charPed)
@@ -294,19 +326,19 @@ CreateThread(function()
 		if NetworkIsSessionStarted() then
             character = CharacterClass.new() -- create a new instance of the Character class
             character:openCharMenu(true)
-			-- TriggerEvent('qb-multicharacter:client:chooseChar')
+			-- character:errorMethod1() -- This will print "Error in errorMethod1!" to the console
+            -- character:errorMethod2() -- This will print "attempt to index a nil value" to the console
 			return
 		end
 	end
 end)
 
--- Events
+-- Events, we could create 1 singl event for qb-multicharacter, and then use the payload to determine what to do
 RegisterNetEvent('qb-multicharacter:client:closeNUI', function(toggle)
     character:closeNUI(toggle)
 end)
 
 RegisterNetEvent('qb-multicharacter:client:spawnLastLocation', function(coords, cData)
-    print('qb-multicharacter:client:spawnLastLocation')
     character:spawnLastLocation(coords, cData)
 end)
 
